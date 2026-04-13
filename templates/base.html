@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CryptoCloud{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+{% if session.get('user_id') %}
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon-shield">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#shieldGrad)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <defs>
+            <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#00e5ff"/>
+              <stop offset="100%" stop-color="#b06aff"/>
+            </linearGradient>
+          </defs>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10" stroke="url(#shieldGrad)" stroke-width="1.8"/>
+        </svg>
+      </div>
+      <span class="logo-text">CryptoCloud</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+      {% if session.get('role') == 'admin' %}
+      <a href="/admin" class="nav-item {% if request.path == '/admin' %}active{% endif %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
+          <circle cx="18" cy="18" r="3"/><path d="M18 15v3m0 3v.01"/>
+        </svg>
+        <span>Administration</span>
+      </a>
+      {% endif %}
+    
+{% if session.get('role') == 'admin' %}
+  <a href="{{ url_for('admin.logs') }}" class="nav-item {% if request.path == '/admin/logs' %}active{% endif %}">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+    <span>Logs</span>
+  </a>
+  {% endif %}
+  {% if session.get('role') == 'admin' %}
+<a href="{{ url_for('admin.crypto_admin') }}" class="nav-item {% if request.path == '/admin/crypto' %}active{% endif %}">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+  <span>Users Crypto</span>
+</a>
+<a href="{{ url_for('files.crypto_logs') }}" 
+   class="nav-item {% if request.path == '/crypto-logs' %}active{% endif %}">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" 
+       stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <line x1="9" y1="12" x2="15" y2="12"/>
+    <line x1="12" y1="9" x2="12" y2="15"/>
+  </svg>
+  <span>Fichiers Crypto</span>
+</a>
+{% endif %}
+
+    </nav>
+
+ <div class="sidebar-bottom">
+  <div class="user-menu">
+    <div class="user-info" onclick="toggleUserMenu()">
+      <div class="user-avatar">{{ session['username'][0]|upper }}</div>
+      <div class="user-details">
+        <p class="user-name">{{ session['username'] }}</p>
+        <p class="user-role">{{ session.get('role', 'user') }}</p>
+      </div>
+      <svg class="user-menu-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </div>
+    <div class="user-dropdown" id="userDropdown">
+      <a href="/change-password" class="dropdown-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        Changer mot de passe
+      </a>
+      <div class="dropdown-divider"></div>
+      <a href="/logout" class="dropdown-item logout-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Déconnexion
+      </a>
+    </div>
+  </div>
+</div>
+
+
+  </aside>
+
+  <div class="page-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">
+              {{ message }}
+              <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+{% else %}
+<div class="auth-wrapper">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}" style="position:fixed;top:1.5rem;left:50%;transform:translateX(-50%);z-index:999;min-width:320px;">
+          {{ message }}
+          <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  {% block auth_content %}{% endblock %}
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

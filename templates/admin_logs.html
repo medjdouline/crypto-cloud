@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Journal des logs — CryptoCloud{% endblock %}
+{% block content %}
+
+<div class="dash-header">
+  <div>
+    <h1 class="page-title">Journal des logs <span class="highlight"></span></h1>
+    <p class="page-sub">Historique complet des activités du système</p>
+  </div>
+ 
+</div>
+
+<!-- Stats rapides -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon icon-blue">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ logs|length }}</p>
+      <p class="stat-label">Événements totaux</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ logs|selectattr('action', 'equalto', 'login')|list|length }}</p>
+      <p class="stat-label">Connexions</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ logs|selectattr('action', 'equalto', 'upload')|list|length }}</p>
+      <p class="stat-label">Uploads</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ logs|selectattr('action', 'equalto', 'download')|list|length }}</p>
+      <p class="stat-label">Downloads</p>
+    </div>
+  </div>
+</div>
+
+<!-- Liste des logs -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">Historique complet</h2>
+    <span class="badge-count">{{ logs|length }} événements</span>
+  </div>
+  
+  {% if logs %}
+  <div class="logs-container">
+    <table class="logs-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Utilisateur</th>
+          <th>Action</th>
+          <th>Détails</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr class="log-row log-{{ log['action'] }}">
+          <td class="log-time">{{ log['timestamp'][:19] }}</td>
+          <td class="log-user">
+            <span class="user-badge">{{ log['username'] or 'système' }}</span>
+          </td>
+          <td class="log-action-cell">
+            <span class="action-badge action-{{ log['action'] }}">
+              {% if log['action'] == 'login' %} Connexion
+              {% elif log['action'] == 'logout' %} Déconnexion
+              {% elif log['action'] == 'upload' %} Upload
+              {% elif log['action'] == 'download' %} Download
+              {% elif log['action'] == 'delete' %}Suppression
+              {% elif log['action'] == 'share' %} Partage
+              {% elif log['action'] == 'register' %} Inscription
+              {% elif log['action'] == 'password_change' %} Changement MDP
+              {% else %}📝 {{ log['action'] }}{% endif %}
+            </span>
+          </td>
+          <td class="log-details">{{ log['details'] or '—' }}</td>
+          <td class="log-ip">{{ log['ip'] or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>Aucune activité enregistrée</p>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  .logs-container {
+    overflow-x: auto;
+  }
+  
+  .logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  
+  .logs-table th {
+    text-align: left;
+    padding: 0.9rem 1rem;
+    background: var(--bg-elevated);
+    font-weight: 600;
+    color: var(--text-2);
+    border-bottom: 1px solid var(--border-light);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .logs-table td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-1);
+  }
+  
+  .log-row:hover {
+    background: var(--bg-elevated);
+  }
+  
+  .log-time {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-2);
+    white-space: nowrap;
+  }
+  
+  .user-badge {
+    font-weight: 600;
+    color: var(--text-1);
+  }
+  
+  .action-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  
+  .action-login { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+  .action-logout { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+  .action-upload { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+  .action-download { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
+  .action-delete { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+  .action-share { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+  .action-register { background: rgba(249, 115, 22, 0.15); color: #f97316; }
+  .action-password_change { background: rgba(236, 72, 153, 0.15); color: #ec489a; }
+  
+  .log-details {
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-2);
+  }
+  
+  .log-ip {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-3);
+    white-space: nowrap;
+  }
+  
+  .badge-count {
+    background: var(--bg-elevated);
+    padding: 0.2rem 0.6rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-2);
+  }
+  
+  .empty-state {
+    padding: 3rem;
+    text-align: center;
+    color: var(--text-3);
+  }
+</style>
+
+{% endblock %}

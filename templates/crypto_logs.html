@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+{% block title %}Journal Cryptographique — CryptoCloud{% endblock %}
+{% block content %}
+
+<div class="dash-header">
+  <div>
+    <h1 class="page-title">Journal Cryptographique des fichiers<span class="highlight">🔐</span></h1>
+    <p class="page-sub">Suivi des opérations de chiffrement sur vos fichiers</p>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <div style="display:flex; align-items:center; gap:0.6rem;">
+      <span class="section-icon icon-blue"></span>
+      <h2 class="card-title">Fichiers chiffrés — Détails cryptographiques</h2>
+    </div>
+    <span class="badge-count">{{ files|length }} fichiers</span>
+  </div>
+
+    {% if files %}
+  <div class="table-wrapper">
+    <table class="crypto-table">
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Fichier</th>
+          <th>Taille</th>
+          <th>Clé AES</th>
+          <th>IV</th>
+          <th>Hash SHA-256</th>
+          <th>Signature RSA</th>
+          <th>Date upload</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+     <tbody>
+  {% for f in files %}
+  <tr data-aes="{{ f.encrypted_aes_key }}"
+      data-iv="{{ f.iv }}"
+      data-hash="{{ f.sha256_hash }}"
+      data-sig="{{ f.signature | default('') }}">
+<td>
+            <span class="user-owner">
+              {{ f.owner_username or f.username or 'Inconnu' }}
+              {% if f.file_type == 'shared' %}
+                <span class="shared-badge"> (partagé)</span>
+              {% endif %}
+            </span>
+          </td>
+    <!-- Fichier -->
+    <td>
+      <div class="mono-wrap">
+        <span class="file-icon">📎</span>
+        <div style="min-width:0; overflow:hidden;">
+          <p class="mono-val" style="font-weight:600; color:var(--text-1);">{{ f.original_name }}</p>
+          <p class="mono-val" style="font-size:0.62rem; color:var(--text-3);">{{ f.stored_name }}</p>
+        </div>
+      </div>
+    </td>
+
+    <!-- Taille -->
+    <td>
+      <div class="mono-wrap">
+        <span class="mono-val">
+          {% set size_kb = (f.file_size / 1024)|round(1) %}
+          {% if size_kb > 1024 %}{{ (size_kb / 1024)|round(2) }} MB
+          {% else %}{{ size_kb }} KB{% endif %}
+        </span>
+      </div>
+    </td>
+
+    <!-- Clé AES -->
+    <td>
+      <div class="mono-wrap">
+        <span class="mono-val">{{ f.encrypted_aes_key[:40] }}…</span>
+        <button class="copy-btn" onclick="copyField(this, 'aes')" title="Copier">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+      </div>
+    </td>
+
+    <!-- IV -->
+    <td>
+      <div class="mono-wrap">
+        <span class="mono-val">{{ f.iv[:40] }}…</span>
+        <button class="copy-btn" onclick="copyField(this, 'iv')" title="Copier">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+      </div>
+    </td>
+
+    <!-- Hash SHA-256 -->
+    <td>
+      <div class="mono-wrap">
+        <span class="mono-val hash-val">{{ f.sha256_hash[:40] }}…</span>
+        <button class="copy-btn" onclick="copyField(this, 'hash')" title="Copier">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+      </div>
+    </td>
+
+    <!-- Signature RSA -->
+    <td>
+      {% if f.signature %}
+      <div class="mono-wrap">
+        <span class="sig-ok">✔ Valide</span>
+        <button class="copy-btn" onclick="copyField(this, 'sig')" title="Copier">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
+      </div>
+      {% else %}
+      <span class="sig-missing">— Aucune</span>
+      {% endif %}
+    </td>
+
+    <!-- Date -->
+    <td>
+      <div class="mono-wrap">
+        <span class="mono-val">{{ f.uploaded_at[:16] }}</span>
+      </div>
+    </td>
+
+    <!-- Actions -->
+    <td class="cell-actions">
+      <a href="{{ url_for('files.download', file_id=f.id) }}" class="action-btn dl-btn" title="Télécharger">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </a>
+    </td>
+
+  </tr>
+  {% endfor %}
+</tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>Aucun fichier chiffré trouvé.</p>
+  </div>
+  {% endif %}
+</div>
+ 
+
+<!-- ── Toast copie ────────────────────────────────────────────────────────── -->
+<div id="copy-toast" class="copy-toast">✔ Copié !</div>
+
+<style>
+/* ══════════════════════════════════════════════════════
+   WRAPPER
+══════════════════════════════════════════════════════ */
+.table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* ══════════════════════════════════════════════════════
+   TABLEAU FICHIERS - CORRECTION FINALE
+══════════════════════════════════════════════════════ */
+.crypto-table {
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  width: 100%;
+  min-width: 1550px;
+  table-layout: fixed !important;   /* ← Très important */
+  border-spacing: 0;
+}
+
+.crypto-table th,
+.crypto-table td {
+  text-align: left;
+  vertical-align: middle;
+  padding: 0.9rem 0.8rem;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+.crypto-table th {
+  background: var(--bg-elevated);
+  font-weight: 600;
+  color: var(--text-2);
+  font-size: 0.73rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* LARGEURS FORCÉES PAR COLONNE */
+.crypto-table th:nth-child(1), .crypto-table td:nth-child(1) { width: 100px !important; min-width: 100px !important; } /* Fichier */
+.crypto-table th:nth-child(2), .crypto-table td:nth-child(2) { width: 150px  !important; min-width: 95px  !important; } /* Taille */
+.crypto-table th:nth-child(3), .crypto-table td:nth-child(3) { width: 80px !important; min-width: 140px !important; } /* Algorithme */
+.crypto-table th:nth-child(4), .crypto-table td:nth-child(4) { width: 200px !important; min-width: 200px !important; } /* Clé AES */
+.crypto-table th:nth-child(5), .crypto-table td:nth-child(5) { width: 170px !important; min-width: 170px !important; } /* IV */
+.crypto-table th:nth-child(6), .crypto-table td:nth-child(6) { width: 200px !important; min-width: 200px !important; } /* Hash */
+.crypto-table th:nth-child(7), .crypto-table td:nth-child(7) { width: 90px !important; min-width: 90px !important; } /* Signature */
+.crypto-table th:nth-child(8), .crypto-table td:nth-child(8) { width: 100px !important; min-width: 160px !important; } /* Date */
+.crypto-table th:nth-child(9), .crypto-table td:nth-child(9) { width: 90px  !important; min-width: 90px  !important; text-align: center; } /* Actions */
+
+.user-owner {
+  font-weight: 500;
+  color: var(--text-1);
+  font-size: 0.82rem;
+}
+
+.shared-badge {
+  font-size: 0.68rem;
+  color: #8b5cf6;
+  font-weight: 400;
+}
+.file-row:hover { 
+  background: var(--bg-elevated); 
+}
+
+/* Cellule Fichier */
+.file-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.file-name {
+  font-weight: 600;
+  color: var(--text-1);
+  margin: 0;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-stored {
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  color: var(--text-3);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mono values */
+.mono-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.mono-val {
+  font-family: var(--mono, monospace);
+  font-size: 0.69rem;
+  color: var(--text-2);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hash-val { color: #8b5cf6; }
+
+/* Autres styles (je garde le reste identique mais nettoyé) */
+.algo-badges { display: flex; flex-direction: column; gap: 4px; }
+.algo-badge {
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  width: fit-content;
+}
+.algo-badge.rsa  { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.algo-badge.aes  { background: rgba(16,185,129,0.15); color: #10b981; }
+.algo-badge.oaep { background: rgba(249,115,22,0.15); color: #f97316; }
+
+.copy-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  padding: 3px;
+  border-radius: 4px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.copy-btn:hover { opacity: 1; color: #3b82f6; }
+
+.sig-ok { color: #10b981; font-weight: 600; }
+.sig-missing { color: var(--text-3); }
+
+.cell-date {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--text-2);
+}
+
+.cell-actions { text-align: center; }
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+}
+.dl-btn { background: rgba(16,185,129,0.15); color: #10b981; }
+.dl-btn:hover { background: rgba(16,185,129,0.3); }
+
+/* ====================== TABLEAU LOGS ====================== */
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 900px;
+  table-layout: fixed;
+}
+
+.logs-table th,
+.logs-table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logs-table th {
+  background: var(--bg-elevated);
+  font-weight: 600;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+/* Largeurs logs */
+.logs-table th:nth-child(1), .logs-table td:nth-child(1) { width: 180px; }
+.logs-table th:nth-child(2), .logs-table td:nth-child(2) { width: 140px; }
+.logs-table th:nth-child(3), .logs-table td:nth-child(3) { width: 200px; }
+.logs-table th:nth-child(4), .logs-table td:nth-child(4) { width: auto; }
+.logs-table th:nth-child(5), .logs-table td:nth-child(5) { width: 130px; }
+
+/* ====================== MISC ====================== */
+.badge-count {
+  background: var(--bg-elevated);
+  padding: 0.25rem 0.7rem;
+  border-radius: 2rem;
+  font-size: 0.76rem;
+  color: var(--text-2);
+}
+.empty-state { padding: 3.5rem 2rem; text-align: center; color: var(--text-3); }
+
+.copy-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #10b981;
+  color: white;
+  padding: 0.6rem 1.3rem;
+  border-radius: 6px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 10000;
+}
+.copy-toast.show { opacity: 1; }
+</style>
+
+
+<script>
+// Les données sont stockées dans data-* sur le <tr>
+// pas dans onclick → plus de conflit avec les guillemets
+function copyField(btn, field) {
+  const row = btn.closest('tr');
+  const value = row.dataset[field === 'aes' ? 'aes' : field];
+  navigator.clipboard.writeText(value).then(() => {
+    const toast = document.getElementById('copy-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  });
+}
+</script>
+
+{% endblock %}

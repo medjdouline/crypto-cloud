@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Inscription — CryptoCloud{% endblock %}
+{% block auth_content %}
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+<div class="auth-split">
+
+  <div class="auth-brand">
+    <div class="brand-content">
+      
+      <h1 class="brand-title">CryptoCloud</h1>
+      <p class="brand-sub">
+        Créez votre espace personnel sécurisé. Une paire de clés RSA 2048 bits
+        sera générée automatiquement et votre clé privée sera protégée par votre mot de passe.
+      </p>
+<div class="brand-features">
+  <div class="feature-pill">Clés RSA générées à l'inscription</div>
+  <div class="feature-pill">Clé privée chiffrée par votre mot de passe</div>
+  <div class="feature-pill">100 MB offerts dès la création</div>
+</div>
+    </div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <h2 class="auth-title">Créer un compte</h2>
+      <p class="auth-sub">Votre espace chiffré en quelques secondes</p>
+      <form method="POST" action="/register" class="auth-form">
+        <div class="field">
+          <label>Nom d'utilisateur</label>
+          <input type="text" name="username" required autocomplete="off" placeholder="votre_nom">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" required placeholder="vous@email.com">
+        </div>
+        <div class="field">
+          <label>Mot de passe</label>
+          <input type="password" name="password" required placeholder="minimum 8 caractères">
+        </div>
+        <div class="field">
+          <label>Confirmer le mot de passe</label>
+          <input type="password" name="confirm_password" required placeholder="••••••••">
+        </div>
+        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+
+        <button type="submit" class="btn-submit">Créer mon compte →</button>
+      </form>
+      <p class="auth-switch">Déjà un compte ? <a href="/login">Se connecter</a></p>
+    </div>
+  </div>
+
+</div>
+
+<style>
+.modal-recovery {
+  max-width: 550px;
+  width: 90%;
+}
+
+.modal-body {
+  padding: 0.5rem 0 1rem 0;
+}
+
+.warning-box {
+  background: rgba(255, 154, 60, 0.15);
+  border-left: 3px solid var(--orange);
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.warning-box svg {
+  flex-shrink: 0;
+  color: var(--orange);
+}
+
+.warning-box p {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.warning-box strong {
+  color: var(--orange);
+}
+
+.recovery-phrase-box {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+}
+
+.recovery-phrase {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--cyan);
+  word-break: break-word;
+  margin-bottom: 0.8rem;
+  text-align: center;
+}
+
+.copy-phrase-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  cursor: pointer;
+  color: var(--text-2);
+  transition: all var(--transition);
+  margin: 0 auto;
+}
+
+.copy-phrase-btn:hover {
+  background: var(--cyan);
+  color: var(--bg);
+  border-color: var(--cyan);
+}
+
+.copy-phrase-btn:hover svg {
+  stroke: var(--bg);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+</style>
+
+<script>
+let recoveryPhrase = '';
+
+function showRecoveryModal(phrase) {
+  recoveryPhrase = phrase;
+  document.getElementById('recoveryPhraseText').innerText = phrase;
+  document.getElementById('recoveryModal').style.display = 'flex';
+}
+
+function closeRecoveryModal() {
+  document.getElementById('recoveryModal').style.display = 'none';
+}
+
+function copyRecoveryPhrase() {
+  navigator.clipboard.writeText(recoveryPhrase);
+  const btn = event.target.closest('.copy-phrase-btn');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copié !';
+  setTimeout(() => {
+    btn.innerHTML = originalText;
+  }, 2000);
+}
+
+function confirmRecovery() {
+  closeRecoveryModal();
+  window.location.href = '/login';
+}
+
+// Intercepter le formulaire d'inscription
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  
+  const response = await fetch('/register', {
+    method: 'POST',
+    body: formData
+  });
+  
+  const result = await response.json();
+  
+  if (result.success) {
+    showRecoveryModal(result.recovery_phrase);
+  } else {
+    alert('Erreur: ' + result.message);
+  }
+});
+</script>
+{% endblock %}

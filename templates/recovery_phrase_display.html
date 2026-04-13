@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Phrase de récupération — CryptoCloud{% endblock %}
+
+{% block auth_content %}
+
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+      </div>
+      <h1>🔐 Phrase de récupération</h1>
+      <p>Conservez précieusement ces 12 mots</p>
+    </div>
+
+    <div class="warning-box">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M12 8v4M12 16h.01"/>
+        <circle cx="12" cy="12" r="10"/>
+      </svg>
+      <p><strong>⚠️ IMPORTANT :</strong> Cette phrase vous sera demandée si vous oubliez votre mot de passe.<br>
+      <strong>Notez-la et conservez-la dans un endroit sûr !</strong> Elle ne sera plus jamais affichée.<br>
+      Elle permet de déchiffrer votre clé privée RSA via PBKDF2 + AES-256.</p>
+    </div>
+
+    <div class="recovery-phrase-box">
+      <div class="recovery-phrase">{{ recovery_phrase }}</div>
+      <button class="copy-btn" onclick="copyToClipboard()">📋 Copier</button>
+    </div>
+
+    <div class="auth-footer">
+      <a href="/login" class="btn-primary">J'ai noté, me connecter</a>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Centrage ultra fiable */
+.auth-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg);           /* ou transparent si tu veux voir le fond du base.html */
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.auth-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: var(--shadow);
+  margin: auto;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--cyan-glow), var(--purple-glow));
+  border: 1px solid var(--border-2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  color: var(--cyan);
+}
+
+.auth-header h1 {
+  font-family: var(--font-head);
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.auth-header p {
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+
+.warning-box {
+  background: rgba(255, 154, 60, 0.15);
+  border-left: 3px solid var(--orange);
+  padding: 1.1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.8rem;
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+}
+
+.warning-box svg {
+  flex-shrink: 0;
+  color: var(--orange);
+}
+
+.warning-box p {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.recovery-phrase-box {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem;
+  margin: 0 auto 1.8rem;
+  text-align: center;
+  width: 100%;
+  max-width: 460px;
+}
+
+.recovery-phrase {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--cyan);
+  word-break: break-word;
+  margin-bottom: 1rem;
+  padding: 0.6rem;
+}
+
+.copy-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--text-2);
+  transition: all var(--transition);
+}
+
+.copy-btn:hover {
+  background: var(--cyan);
+  color: var(--bg);
+  border-color: var(--cyan);
+}
+
+.auth-footer {
+  text-align: center;
+}
+
+.btn-primary {
+  display: inline-block;
+  padding: 0.75rem 1.6rem;
+  background: linear-gradient(135deg, var(--cyan), #0099bb);
+  color: var(--bg);
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,229,255,.3);
+}
+</style>
+
+<script>
+function copyToClipboard() {
+  const phrase = document.querySelector('.recovery-phrase').innerText;
+  navigator.clipboard.writeText(phrase).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    const original = btn.innerHTML;
+    btn.innerHTML = '✓ Copié !';
+    setTimeout(() => { btn.innerHTML = original; }, 2000);
+  });
+}
+</script>
+
+{% endblock %}

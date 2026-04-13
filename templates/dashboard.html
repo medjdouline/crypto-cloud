@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CryptoCloud{% endblock %}
+{% block content %}
+
+<div class="dash-header">
+  <div>
+    <h1 class="page-title">Bonjour, <span class="highlight">{{ session['username'] }}</span> </h1>
+    <p class="page-sub">Vos fichiers sont chiffrés de bout en bout · RSA 2048 + AES-256</p>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon icon-blue">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ files|length }}</p>
+      <p class="stat-label">Fichiers stockés</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ quota_used_mb }} <span style="font-size:.9rem;opacity:.6">MB</span></p>
+      <p class="stat-label">Espace utilisé</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ shared_files|length }}</p>
+      <p class="stat-label">Partagés avec moi</p>
+    </div>
+  </div>
+  <div class="stat-card quota-stat">
+    <div class="quota-top">
+      <span class="stat-label">Quota</span>
+      <span class="quota-nums">{{ quota_used_mb }} / {{ quota_max_mb }} MB</span>
+    </div>
+    <div class="quota-bar-wrap">
+      <div class="quota-bar-track">
+        <div class="quota-bar-fill" data-percent="{{ quota_percent }}" style="width:0%"></div>
+      </div>
+      <span class="quota-pct">{{ quota_percent }}%</span>
+    </div>
+  </div>
+</div>
+
+<div class="dash-grid">
+  <!-- Colonne principale -->
+  <div class="dash-col-main">
+
+    <!-- Upload -->
+    <div class="card" style="animation-delay:.1s">
+      <div class="card-header">
+        <h2 class="card-title">Uploader un fichier</h2>
+      </div>
+      <form method="POST" action="/upload" enctype="multipart/form-data">
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <p class="upload-text" id="uploadLabel">
+            Glissez un fichier ici ou <span class="upload-link">cliquez pour sélectionner</span>
+          </p>
+          <p class="upload-hint">PDF · Images · Docs · ZIP · Max 50 MB</p>
+          <input type="file" name="file" id="fileInput" required>
+        </div>
+        <button type="submit" class="btn-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Chiffrer &amp; Uploader
+        </button>
+      </form>
+    </div>
+
+    <!-- Mes fichiers -->
+    <div class="card" style="animation-delay:.15s">
+      <div class="card-header">
+        <h2 class="card-title">Mes fichiers</h2>
+        <span class="badge-count">{{ files|length }}</span>
+      </div>
+      {% if files %}
+      <div class="file-list">
+        {% for file in files %}
+        <div class="file-row" style="animation-delay:{{ loop.index0 * 0.05 }}s">
+          <div class="file-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </div>
+          <div class="file-info">
+            <p class="file-name">{{ file['original_name'] }}</p>
+            <p class="file-meta">{{ (file['file_size'] / 1024)|round(1) }} KB · {{ file['uploaded_at'][:16] }}</p>
+          </div>
+          <div class="file-actions">
+            <a href="/download/{{ file['id'] }}" class="icon-btn icon-btn-blue" title="Télécharger">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </a>
+            <button class="icon-btn icon-btn-green" title="Partager"
+                    onclick="openShareModal({{ file['id'] }}, '{{ file['original_name'] }}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
+            <form method="POST" action="/delete/{{ file['id'] }}" style="display:inline"
+                  onsubmit="return confirm('Supprimer ce fichier ?')">
+              <button type="submit" class="icon-btn icon-btn-red" title="Supprimer">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6"/><path d="M14 11v6"/>
+                </svg>
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <p>Aucun fichier · Uploadez votre premier fichier !</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Partagés avec moi -->
+    {% if shared_files %}
+    <div class="card" style="animation-delay:.2s">
+      <div class="card-header">
+        <h2 class="card-title">Partagés avec moi</h2>
+        <span class="badge-count badge-green">{{ shared_files|length }}</span>
+      </div>
+      <div class="file-list">
+        {% for file in shared_files %}
+        <div class="file-row">
+          <div class="file-icon file-icon-green">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </div>
+          <div class="file-info">
+            <p class="file-name">{{ file['original_name'] }}</p>
+            <p class="file-meta">De {{ file['owner_name'] }} · {{ file['shared_at'][:16] }}</p>
+          </div>
+          <div class="file-actions">
+            <a href="/download/{{ file['id'] }}" class="icon-btn icon-btn-blue" title="Télécharger">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Colonne activité -->
+  <div class="dash-col-side">
+    <div class="card card-full" style="animation-delay:.2s">
+      <div class="card-header">
+        <h2 class="card-title">Activité récente</h2>
+      </div>
+      {% if logs %}
+      <ul class="activity-list">
+        {% for log in logs %}
+        <li class="activity-item" style="animation-delay:{{ loop.index0 * 0.04 }}s">
+          <div class="activity-dot dot-{{ log['action'] }}"></div>
+          <div class="activity-body">
+            <p class="activity-action">{{ log['action'] }}</p>
+            <p class="activity-detail">{{ log['details'] or '—' }}</p>
+            <p class="activity-time">{{ log['timestamp'][:16] }}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty-state"><p>Aucune activité</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal partage -->
+<div class="modal-overlay" id="shareModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Partager un fichier</h3>
+      <button class="modal-close" onclick="closeShareModal()">✕</button>
+    </div>
+    <p class="modal-sub">Fichier : <strong id="shareFileName"></strong></p>
+    <form method="POST" action="/share">
+      <input type="hidden" name="file_id" id="shareFileId">
+      <div class="field">
+        <label>Nom d'utilisateur du destinataire</label>
+        <input type="text" name="share_with" required autocomplete="off" placeholder="nom_utilisateur">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" onclick="closeShareModal()">Annuler</button>
+        <button type="submit" class="btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          Partager
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

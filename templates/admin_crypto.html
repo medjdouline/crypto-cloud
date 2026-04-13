@@ -1,0 +1,1185 @@
+{% extends "base.html" %}
+{% block title %}Crypto Admin — CryptoCloud{% endblock %}
+{% block content %}
+
+<div class="dash-header">
+  <div>
+    <h1 class="page-title">Journal Cryptographique des Utilisateurs<span class="highlight"></span></h1>
+    <p class="page-sub">Supervision des opérations cryptographiques et des clés</p>
+  </div>
+</div>
+
+<!-- Statistiques crypto -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon icon-blue">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ total_users }}</p>
+      <p class="stat-label">Utilisateurs avec clés RSA</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-green">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ total_files_encrypted }}</p>
+      <p class="stat-label">Fichiers chiffrés (AES-256)</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-purple">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+        <path d="M12 11v2"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ total_shares }}</p>
+      <p class="stat-label">Partages (rechiffrement RSA)</p>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon icon-orange">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 8v4l3 3"/>
+      </svg>
+    </div>
+    <div>
+      <p class="stat-value">{{ crypto_ops_total }}</p>
+      <p class="stat-label">Opérations crypto totales</p>
+    </div>
+  </div>
+</div>
+
+<!-- Onglets Crypto -->
+<div class="crypto-tabs">
+  <button class="tab-btn active" onclick="showTab('keys')"> Clés RSA</button>
+  <button class="tab-btn" onclick="showTab('logs')">Logs Crypto des Utilisateurs</button>
+</div>
+
+<!-- Tab 1: Clés RSA des utilisateurs (Vue horizontale) -->
+
+<div id="keys-tab" class="tab-content active">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Clés RSA (2048 bits)</h2>
+      <span class="badge-count">{{ users|length }} utilisateurs</span>
+    </div>
+    <div class="keys-table-container">
+      <table class="keys-table">
+        <thead>
+            <th>Utilisateur</th>
+            <th>Statut</th>
+            <th>Empreinte complète (SHA256)</th>
+            <th>Créé le</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr class="key-row" onclick="toggleKeyDetails({{ user.id }})">
+            <td>
+              <div class="table-user-mini">
+                <div class="mini-avatar">{{ user.username[0]|upper }}</div>
+                <div>
+                  <strong>{{ user.username }}</strong>
+                  <span class="user-email">{{ user.email }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if user.public_key %}
+              <span class="status-badge status-valid"> Valide</span>
+              {% else %}
+              <span class="status-badge status-missing">Manquante</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if user.key_fingerprint %}
+              <div class="fingerprint-full-container">
+                <code class="fingerprint-full">{{ user.key_fingerprint }}</code>
+                <button class="copy-btn-small" onclick="event.stopPropagation(); copyToClipboard('{{ user.key_fingerprint }}')" title="Copier l'empreinte">
+                  
+                </button>
+              </div>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ user.created_at[:10] }}</td>
+            <td>
+              <button class="icon-btn-small" onclick="event.stopPropagation(); toggleKeyDetails({{ user.id }})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          <tr id="details-{{ user.id }}" class="key-details-row" style="display: none;">
+            <td colspan="5">
+              <div class="key-details-panel">
+                <div class="key-details-header">
+                  <h4> Détails des clés - {{ user.username }}</h4>
+                </div>
+                <div class="key-details-grid">
+                  
+                  <!-- Clé publique -->
+                  <div class="detail-section">
+                    <h5> Clé publique (PEM)</h5>
+                    <details>
+                      <summary>Afficher la clé publique</summary>
+                      <div class="full-value-container">
+                        <pre class="full-value-pre"><code>{{ user.public_key or 'Non disponible' }}</code></pre>
+                        <button class="copy-btn" onclick="copyToClipboard('{{ user.public_key }}')">Copier</button>
+                      </div>
+                    </details>
+                  </div>
+                     <!-- Empreinte complète -->
+                  <div class="detail-section">
+                    <h5> Empreinte complète (SHA256)</h5>
+                    <div class="detail-content">
+                      <div class="full-value-container">
+                        <code class="full-value">{{ user.key_fingerprint or 'Non disponible' }}</code>
+                        <button class="copy-btn" onclick="copyToClipboard('{{ user.key_fingerprint }}')"> Copier</button>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Clé privée chiffrée -->
+                  <div class="detail-section">
+                    <h5> Clé privée (chiffrée avec PBKDF2+AES-256)</h5>
+                    <details>
+                      <summary>Afficher la clé privée chiffrée</summary>
+                      <div class="full-value-container">
+                        <pre class="full-value-pre private-key"><code>{{ user.private_key_encrypted or 'Non disponible' }}</code></pre>
+                        <button class="copy-btn" onclick="copyToClipboard('{{ user.private_key_encrypted }}')"> Copier</button>
+                      </div>
+                      <div class="key-info">
+                        <span> Sel: {{ user.private_key_salt[:32] if user.private_key_salt else '—' }}...</span>
+                        <span> Chiffrement: AES-256-CFB</span>
+                        <span> KDF: PBKDF2 (100k itérations, SHA256)</span>
+                      </div>
+                    </details>
+                  </div>
+
+               
+                  
+                  <!-- Phrase de récupération chiffrée -->
+                   <div class="detail-section">
+                    <h5>Phrase de récupération (chiffrée avec PBKDF2 + AES-256)</h5>
+                    <details>
+                      <summary>Afficher la phrase de récupération chiffrée</summary>
+                      <div class="full-value-container">
+                        <pre class="full-value-pre recovery-key"><code>{{ user.recovery_key_encrypted or 'Non disponible' }}</code></pre>
+                        <button class="copy-btn" onclick="copyToClipboard('{{ user.recovery_key_encrypted }}')">Copier</button>
+                      </div>
+                      <div class="key-info">
+                        <span>Sel : {{ user.recovery_salt[:32] if user.recovery_salt else '—' }}...</span>
+                        <span>Chiffrement : AES-256-CFB</span>
+                        <span>KDF : PBKDF2 (100 000 itérations, SHA256)</span>
+                      </div>
+                    </details>
+                  </div>
+                                    <!-- Clé privée chiffrée avec la phrase de récupération (12 mots) -->
+                  <div class="detail-section">
+                    <h5>Clé privée RSA (chiffrée avec la phrase de récupération 12 mots)</h5>
+                    <details>
+                      <summary>Afficher la clé privée chiffrée avec recovery phrase</summary>
+                      <div class="full-value-container">
+                        <pre class="full-value-pre recovery-private-key"><code>{{ user.recovery_key_encrypted or 'Non disponible' }}</code></pre>
+                        <button class="copy-btn" onclick="copyToClipboard('{{ user.recovery_key_encrypted }}')">Copier</button>
+                      </div>
+                      <div class="key-info">
+                        <span>Sel : {{ user.recovery_salt[:32] if user.recovery_salt else '—' }}...</span>
+                        <span>Chiffrement : AES-256-CFB</span>
+                        <span>KDF : PBKDF2 (100 000 itérations, SHA256)</span>
+                        
+                      </div>
+                    </details>
+                  </div>
+                  
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 2: Logs cryptographiques (Avec expansion) -->
+<!-- Tab 2: Logs cryptographiques (Avec expansion) -->
+<div id="logs-tab" class="tab-content">
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Opérations cryptographiques</h2>
+      <span class="badge-count">{{ crypto_logs|length }} événements</span>
+    </div>
+    <div class="logs-container">
+      <table class="crypto-logs-table">
+        <thead>
+          32
+            <th>Date & Heure</th>
+            <th>Opération</th>
+            <th>Résumé</th>
+            <th>Utilisateur</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in crypto_logs %}
+          <tr class="crypto-log-row" onclick="toggleLogDetails({{ loop.index }})">
+            <td class="log-time">{{ log.timestamp[:19] }}</td>
+            <td>
+              <span class="crypto-badge crypto-{{ log.action }}">
+                {% if 'keygen' in log.action %} Génération RSA
+                {% elif 'encrypt' in log.action %} Chiffrement AES
+                {% elif 'decrypt' in log.action %} Déchiffrement AES
+                {% elif 'share' in log.action %} Rechiffrement RSA
+                {% elif 'sign' in log.action %} Signature RSA
+                {% elif 'verify' in log.action %}Vérification
+                {% elif 'load' in log.action %} Chargement clé
+                {% elif log.action == 'upload' %} Upload
+                {% elif log.action == 'download' %} Download
+                {% else %}{{ log.action }}{% endif %}
+              </span>
+            </td>
+            <td class="log-summary">
+              {% if log.details %}
+                {{ log.details[:80] }}{% if log.details|length > 80 %}...{% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="log-user-cell">{{ log.username or 'système' }}</td>
+            <td>
+              <button class="icon-btn-small" onclick="event.stopPropagation(); toggleLogDetails({{ loop.index }})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+          <tr id="log-details-{{ loop.index }}" class="log-details-row" style="display: none;">
+            <td colspan="5">
+              <div class="log-details-panel">
+                <div class="log-details-header">
+                  <div>
+                    <h4> Détails de l'opération</h4>
+                    <span class="log-action-type">{{ log.action }}</span>
+                  </div>
+                  <span class="log-time-full">{{ log.timestamp }}</span>
+                </div>
+                
+                <div class="log-details-content">
+                  <div class="detail-group">
+                    <div class="detail-label"> Type d'opération</div>
+                    <div class="detail-value">
+                      {% if 'keygen' in log.action %}Génération de paire de clés RSA-2048
+                      {% elif 'encrypt' in log.action %}Chiffrement hybride (AES-256 + RSA-OAEP)
+                      {% elif 'decrypt' in log.action %}Déchiffrement hybride (RSA-OAEP + AES-256)
+                      {% elif 'share' in log.action %}Rechiffrement de clé AES pour partage
+                      {% elif 'sign' in log.action %}Signature RSA-PSS
+                      {% elif 'verify' in log.action %}Vérification de signature RSA-PSS
+                      {% else %}{{ log.action }}{% endif %}
+                    </div>
+                  </div>
+                  
+                  {% if log.details %}
+                  <div class="detail-group">
+                    <div class="detail-label"> Détails techniques</div>
+                    <div class="detail-value">
+                      {% set details = log.details %}
+                      
+                      {% if 'File:' in details %}
+                      <div class="crypto-detail-line">
+                        <span class="detail-key"> Taille du fichier :</span>
+                        {% set file_size_match = details|regex_search('File: (\\d+) bytes') %}
+                        <span class="detail-number">{{ file_size_match|default('—') }} bytes</span>
+                        <span class="detail-unit">({{ (file_size_match|int / 1024)|round(2) if file_size_match else 0 }} KB)</span>
+                      </div>
+                      {% endif %}
+                      
+                      {% if 'SHA256:' in details %}
+                      <div class="crypto-detail-line">
+                        <span class="detail-key"> Empreinte SHA256 :</span>
+                        {% set hash_match = details|regex_search('SHA256: ([a-f0-9]{16})') %}
+                        <code class="detail-hash">{{ hash_match|default('—') }}...</code>
+                        <button class="copy-hash-btn" onclick="copyToClipboard('{{ hash_match|default('') }}')"> Copier</button>
+                      </div>
+                      {% endif %}
+                      
+                      {% if 'AES-256 key:' in details %}
+                      <div class="crypto-detail-line">
+                        <span class="detail-key"> Clé AES-256 :</span>
+                        {% set key_match = details|regex_search('AES-256 key: ([A-Za-z0-9+/=]{16})') %}
+                        <code class="detail-key-value">{{ key_match|default('—') }}...</code>
+                        <span class="detail-note">(clé unique par fichier)</span>
+                      </div>
+                      {% endif %}
+                      
+                      {% if 'IV:' in details %}
+                      <div class="crypto-detail-line">
+                        <span class="detail-key"> Vecteur d'initialisation (IV) :</span>
+                        {% set iv_match = details|regex_search('IV: ([A-Za-z0-9+/=]{16})') %}
+                        <code class="detail-iv">{{ iv_match|default('—') }}</code>
+                      </div>
+                      {% endif %}
+                      
+                      {% if 'Time:' in details %}
+                      <div class="crypto-detail-line">
+                        <span class="detail-key">Temps d'exécution :</span>
+                        {% set time_match = details|regex_search('Time: ([\\d\\.]+)ms') %}
+                        <span class="detail-number">{{ time_match|default('—') }} ms</span>
+                      </div>
+                      {% endif %}
+                      
+                      {% if 'PBKDF2' in details %}
+                      <div class="crypto-detail-line">
+                        <span class="detail-key">Dérivation de clé :</span>
+                        <span>PBKDF2-HMAC-SHA256</span>
+                        <span class="detail-badge">100 000 itérations</span>
+                      </div>
+                      {% endif %}
+                      
+                      {% if 'RSA' in details %}
+                      <div class="crypto-detail-line">
+                        <span class="detail-key"> Chiffrement asymétrique :</span>
+                        <span>RSA-2048</span>
+                        <span class="detail-badge">OAEP avec SHA-256</span>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  
+               
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Styles pour les logs crypto */
+.logs-container {
+  overflow-x: auto;
+}
+
+.crypto-logs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.crypto-logs-table th {
+  text-align: left;
+  padding: 0.9rem 1rem;
+  background: var(--bg-elevated);
+  font-weight: 600;
+  color: var(--text-2);
+  border-bottom: 2px solid var(--border-light);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.crypto-logs-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-1);
+}
+
+.crypto-log-row {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.crypto-log-row:hover {
+  background: var(--bg-elevated);
+}
+
+.log-time {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.log-user-cell {
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.log-summary {
+  font-size: 0.75rem;
+  color: var(--text-2);
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Badges */
+.crypto-badge {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border-radius: 2rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.crypto-crypto_keygen { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+.crypto-crypto_encrypt { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.crypto-crypto_decrypt { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.crypto-crypto_share { background: rgba(249, 115, 22, 0.15); color: #f97316; }
+.crypto-crypto_sign { background: rgba(236, 72, 153, 0.15); color: #ec489a; }
+.crypto-crypto_verify { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.crypto-crypto_load_private { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+
+/* Panneau de détails */
+.log-details-row {
+  background: var(--bg-dark);
+}
+
+.log-details-panel {
+    background: rgba(0, 0, 0, 0.3);  /* ← Change cette ligne */
+  border-radius: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  padding: 1.5rem;
+}
+
+.log-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border-light);
+}
+
+.log-details-header h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  color: var(--text-1);
+}
+
+.log-action-type {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  background: var(--bg-elevated);
+  border-radius: 1rem;
+  color: var(--text-2);
+  font-family: var(--mono);
+}
+
+.log-time-full {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-3);
+}
+
+/* Groupes de détails */
+.detail-group {
+  margin-bottom: 1.5rem;
+  background: var(--bg-elevated);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.detail-label {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.detail-value {
+  padding: 1rem;
+}
+
+.crypto-detail-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed var(--border-light);
+  flex-wrap: wrap;
+}
+
+.crypto-detail-line:last-child {
+  border-bottom: none;
+}
+
+.detail-key {
+  font-weight: 600;
+  color: var(--text-2);
+  min-width: 180px;
+  font-size: 0.8rem;
+}
+
+.detail-number {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--blue);
+}
+
+.detail-unit {
+  font-size: 0.7rem;
+  color: var(--text-3);
+}
+
+.detail-hash, .detail-key-value, .detail-iv {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  background: var(--bg-dark);
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+  color: var(--text-1);
+}
+
+.detail-badge {
+  background: var(--bg-dark);
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.65rem;
+  color: var(--text-2);
+}
+
+.detail-note {
+  font-size: 0.65rem;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+.copy-hash-btn {
+  background: var(--bg-dark);
+  border: none;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+  font-size: 0.6rem;
+  cursor: pointer;
+  color: var(--text-2);
+  transition: all 0.2s;
+}
+
+.copy-hash-btn:hover {
+  background: var(--blue);
+  color: white;
+}
+
+.log-full-details {
+  background: var(--bg-dark);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.icon-btn-small {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-2);
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s;
+}
+
+.icon-btn-small:hover {
+  background: var(--bg-elevated);
+  color: var(--blue);
+}
+
+.badge-count {
+  background: var(--bg-elevated);
+  padding: 0.2rem 0.6rem;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.refresh-btn {
+  background: var(--bg-elevated);
+  border: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  color: var(--text-2);
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: var(--blue);
+  color: white;
+}
+</style>
+
+<script>
+function showTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  document.getElementById(tabName + '-tab').classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleLogDetails(logId) {
+  const detailsRow = document.getElementById(`log-details-${logId}`);
+  if (detailsRow.style.display === 'none' || !detailsRow.style.display) {
+    detailsRow.style.display = 'table-row';
+  } else {
+    detailsRow.style.display = 'none';
+  }
+}
+
+function copyToClipboard(text) {
+  if (text && text !== '—') {
+    navigator.clipboard.writeText(text);
+    // Afficher une notification temporaire
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '✓ Copié !';
+    setTimeout(() => {
+      btn.textContent = originalText;
+    }, 1500);
+  }
+}
+</script>
+
+
+
+<style>
+/* Styles pour l'affichage complet des valeurs */
+.full-value-container {
+  background: var(--bg-dark);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  position: relative;
+}
+
+.full-value {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  word-break: break-all;
+  white-space: pre-wrap;
+  display: block;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+}
+
+.full-value-pre {
+  margin: 0;
+  background: var(--bg-dark);
+  border-radius: 0.4rem;
+  overflow-x: auto;
+}
+
+.full-value-pre code {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  display: block;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.copy-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.3rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+}
+
+.copy-btn:hover {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: white;
+}
+
+/* Style pour la clé privée */
+.private-key code {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+}
+
+/* Style pour l'empreinte dans le tableau principal */
+.fingerprint-full-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.fingerprint-full {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  background: var(--bg-dark);
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.3rem;
+  word-break: break-all;
+  max-width: 500px;
+}
+
+.copy-btn-small {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-btn-small:hover {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: white;
+}
+
+.key-info {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.65rem;
+  color: var(--text-3);
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
+}
+
+.detail-section details {
+  margin-top: 0.5rem;
+}
+
+.detail-section summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.detail-section summary:hover {
+  text-decoration: underline;
+}
+
+.detail-section h5 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-1);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+  .keys-table-container {
+    overflow-x: auto;
+  }
+  
+  .keys-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .keys-table th,
+  .keys-table td {
+    padding: 0.9rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-light);
+  }
+  
+  .keys-table th {
+    background: var(--bg-elevated);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-2);
+  }
+  
+  .key-row {
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .key-row:hover {
+    background: var(--bg-elevated);
+  }
+  
+  .table-user-mini {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .mini-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--gradient-primary);
+    border-radius: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  
+  .user-email {
+    font-size: 0.7rem;
+    color: var(--text-2);
+    display: block;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+  
+  .status-valid {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+  
+  .status-missing {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+  
+  .fingerprint-short {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    background: var(--bg-dark);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.3rem;
+  }
+  
+  .key-details-row {
+    background: var(--bg-dark);
+  }
+  
+  .key-details-panel {
+    background: rgba(0, 0, 0, 0.3);  
+  border-radius: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+    padding: 1.5rem;
+  }
+  
+  .key-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .detail-section {
+    background: var(--bg-elevated);
+    border-radius: 0.5rem;
+    padding: 1rem;
+  }
+  
+  .detail-section h5 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-1);
+    font-size: 0.85rem;
+  }
+  
+  .detail-section details {
+    font-size: 0.7rem;
+  }
+  
+  .detail-section summary {
+    cursor: pointer;
+    color: var(--blue);
+    margin-bottom: 0.5rem;
+  }
+  
+  .detail-section pre {
+    background: var(--bg-dark);
+    padding: 0.75rem;
+    border-radius: 0.4rem;
+    overflow-x: auto;
+    font-size: 0.65rem;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .full-fingerprint {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    background: var(--bg-dark);
+    padding: 0.4rem;
+    border-radius: 0.3rem;
+    display: inline-block;
+    word-break: break-all;
+  }
+  
+  .key-info {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.65rem;
+    color: var(--text-3);
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+  
+  .icon-btn-small {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-2);
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s;
+  }
+  
+  .icon-btn-small:hover {
+    background: var(--bg-elevated);
+    color: var(--blue);
+  }
+  
+  .copy-btn {
+    background: var(--bg-elevated);
+    border: none;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.3rem;
+    font-size: 0.65rem;
+    cursor: pointer;
+    margin-left: 0.5rem;
+  }
+  
+  .copy-btn:hover {
+    background: var(--blue);
+    color: white;
+  }
+  
+  /* Styles pour les logs */
+  .crypto-log-row {
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .crypto-log-row:hover {
+    background: var(--bg-elevated);
+  }
+  
+  .log-summary {
+    font-size: 0.85rem;
+    color: var(--text-2);
+  }
+  
+  .log-details-row {
+    background: var(--bg-dark);
+  }
+  
+  .log-details-panel {
+    padding: 1.5rem;
+  }
+  
+  .log-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+  
+  .log-details-header h4 {
+    margin: 0;
+  }
+  
+  .log-time-full {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-2);
+  }
+  
+  .log-full-details {
+    background: var(--bg-dark);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+  }
+  
+  .log-details-content p {
+    margin: 0.5rem 0;
+  }
+  
+  .text-muted {
+    color: var(--text-3);
+  }
+  
+  .crypto-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+    padding-bottom: 0;
+  }
+  
+  .tab-btn {
+    padding: 0.7rem 1.5rem;
+    background: transparent;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+  
+  .tab-btn:hover {
+    color: var(--text-1);
+  }
+  
+  .tab-btn.active {
+    color: var(--blue);
+    border-bottom-color: var(--blue);
+  }
+  
+  .tab-content {
+    display: none;
+  }
+  
+  .tab-content.active {
+    display: block;
+  }
+  
+  .crypto-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+  
+  .crypto-crypto_keygen { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+  .crypto-crypto_encrypt { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+  .crypto-crypto_decrypt { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+  .crypto-crypto_share { background: rgba(249, 115, 22, 0.15); color: #f97316; }
+  
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .info-card h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .info-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 0.85rem;
+  }
+  
+  .badge-count {
+    background: var(--bg-elevated);
+    padding: 0.2rem 0.6rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-2);
+  }
+</style>
+
+<script>
+function showTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  document.getElementById(tabName + '-tab').classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleKeyDetails(userId) {
+  const detailsRow = document.getElementById(`details-${userId}`);
+  if (detailsRow.style.display === 'none') {
+    detailsRow.style.display = 'table-row';
+  } else {
+    detailsRow.style.display = 'none';
+  }
+}
+
+function toggleLogDetails(logId) {
+  const detailsRow = document.getElementById(`log-details-${logId}`);
+  if (detailsRow.style.display === 'none') {
+    detailsRow.style.display = 'table-row';
+  } else {
+    detailsRow.style.display = 'none';
+  }
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text);
+  alert('Empreinte copiée dans le presse-papier !');
+}
+
+function regenerateKeys(userId) {
+  if (confirm('Régénérer les clés RSA pour cet utilisateur ?')) {
+    fetch(`/admin/regenerate_keys/${userId}`, {method: 'POST'})
+      .then(() => location.reload());
+  }
+}
+</script>
+
+{% endblock %}
